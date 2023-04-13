@@ -1,4 +1,9 @@
+# Rust
 /target
 
+# This project
 data/*
 !data/clouds.jpg
+
+# Editor
+.vscode/

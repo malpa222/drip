@@ -1,104 +1,48 @@
-use image::{io::Reader as ImageReader, DynamicImage, ImageError, Rgb, RgbImage, Pixel};
-use core::time;
-use std::time::{SystemTime, UNIX_EPOCH};
+pub mod sorting;
+use sorting::sorter::{
+    self,
+    Options,
+    Directions,
+    Markers,
+};
+
+use image::DynamicImage;
+use std::time::{SystemTime, UNIX_EPOCH, Instant};
 
 const PATH: &str = "data/clouds.jpg";
 
-const BLACK: i32 = 0x00000;
-const WHITE: i32 = 0xfffff;
-
-enum Options {
-    Hue,
-    Lightness,
-    Saturation
-}
+const TRESHOLD: f32 = 0.675;
 
 fn main() {
-    let dynamic_img = load_image(PATH);
-    if let Some(img) = dynamic_img {
-        let sorted = sort_image(img.clone(), Options::Lightness);
+    let image = load_image(PATH);
+    let options = Options {
+        Marker: Markers::Hue,
+        Direction: Directions::Rows
+    };
 
-        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let mut save_path = String::from(PATH);
-        save_path.insert_str(
-            PATH.chars().position(|c| c == '.').unwrap(),
-            &format!("-{:?}", timestamp));
+    let t_zero = Instant::now();
+    let sorted = sorter::sort_image(image.clone(), TRESHOLD, options);
+    println!("Sorted image in: {:?}", t_zero.elapsed().as_secs_f32());
 
-        match sorted.save(save_path) {
-            Ok(_) => (),
-            Err(err) => println!("{}", err)
-        }
+    save_image(sorted);
+}
+
+fn load_image(path: &str) -> DynamicImage {
+    match image::open(path) {
+        Ok(image) => image,
+        Err(err) => panic!("{err}")
     }
 }
 
-fn load_image(path: &str) -> Option<DynamicImage> {
-    match ImageReader::open(path) {
-        Ok(encoded) => {
-            match encoded.decode() {
-                Ok(image) => Some(image),
-                Err(err) => {
-                    handle_error(err);
-                    None
-                }
-            }
-        },
-        Err(err) =>  {
-            println!("{err}");
-            None
-        }
+fn save_image(image: DynamicImage) {
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let mut save_path = String::from(PATH);
+    save_path.insert_str(
+        PATH.chars().position(|c| c == '.').unwrap(),
+        &format!("-{:?}", timestamp));
+
+    match image.save(save_path) {
+        Ok(_) => (),
+        Err(err) => panic!("{err}")
     }
-}
-
-fn sort_image(img: DynamicImage, options: Options) -> RgbImage {
-    match options {
-        Options::Hue => unimplemented!(),
-        Options::Saturation => unimplemented!(),
-        Options::Lightness => sort_by_lightness(img),
-    }
-}
-
-fn sort_by_hue(img: RgbImage) {
-    unimplemented!()
-}
-
-fn sort_by_saturation(img: RgbImage) {
-    unimplemented!()
-}
-
-fn sort_by_lightness(img: DynamicImage) -> RgbImage {
-    let mut image = img.clone().into_rgb8();
-
-    fn lightness(pixel: &Rgb<u8>) -> f32 {
-        pixel.to_luma().0[0] as f32 / 255.0
-    }
-
-    let (width, height) = image.dimensions();
-
-    for row in 0..height {
-        let mut pixels: Vec<Rgb<u8>> = Vec::with_capacity(width as usize);
-        let mut x = 0u32;
-
-        // populate row with pixels from image
-        for _ in 0..width {
-            pixels.push(image[(x, row)]);
-            x += 1; // move to the next pixel
-        }
-
-        // do the sorting
-        pixels.sort_by(|a, b| {
-            lightness(a).partial_cmp(&lightness(b)).unwrap()
-        });
-
-        // reorder pixels in the row
-        for (i, pixel) in pixels.iter().enumerate() {
-            image.put_pixel(i as u32, row, *pixel)
-        }
-    }
-
-    return image;
-}
-
-
-fn handle_error(err: ImageError) {
-    unimplemented!()
 }
