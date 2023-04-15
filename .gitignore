@@ -4,6 +4,7 @@
 # This project
 data/*
 !data/clouds.jpg
+!data/clouds_sorted.jpg
 
 # Editor
 .vscode/
